@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ETL AI Chatbot - Hierarchical Menu</title>
+  <style>
+    html, body {
+      font-family: 'Segoe UI', sans-serif;
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(to right, #e3f2fd, #fce4ec);
+      height: 100%;
+    }
+    #chat-container {
+      max-width: 900px;
+      margin: auto;
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    #chatbox {
+      padding: 20px;
+      overflow-y: auto;
+      flex-grow: 1;
+      border-bottom: 2px solid #dee2e6;
+      background-color: #f9f9f9;
+    }
+    .msg {
+      margin: 10px 0;
+    }
+    .user {
+      text-align: right;
+    }
+    .user .text {
+      background: #42a5f5;
+      color: white;
+      padding: 12px 16px;
+      border-radius: 20px;
+      display: inline-block;
+    }
+    .bot .text {
+      background: #f48fb1;
+      color: #333;
+      padding: 12px 16px;
+      border-radius: 20px;
+      display: inline-block;
+    }
+    #input-area {
+      padding: 20px;
+      background: #ffffff;
+    }
+    .radio-group {
+      margin-bottom: 15px;
+      display: block;
+    }
+    .radio-group label {
+      display: block;
+      margin: 10px 0;
+      background: #fff3e0;
+      padding: 10px;
+      border: 1px solid #ffe0b2;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    input[type="radio"] {
+      margin-right: 8px;
+    }
+    #customQuery {
+      display: none;
+      margin-top: 10px;
+      width: 100%;
+      padding: 10px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+    .button-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+    }
+    .button-group button {
+      flex: 1;
+      padding: 12px 0;
+      font-size: 16px;
+      border: none;
+      border-radius: 5px;
+      background-color: #ab47bc;
+      color: white;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .button-group button:hover {
+      background-color: #8e24aa;
+    }
+    .satisfaction-buttons {
+      margin-top: 15px;
+      display: none;
+      gap: 10px;
+    }
+    .wait-animation {
+      font-style: italic;
+      color: #ab47bc;
+      display: none;
+      margin-top: 10px;
+    }
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+  <div id="chat-container">
+    <div id="chatbox">
+      <div class="msg bot"><div class="text">👋 Hello! I am <strong>ETL BOT</strong>. Select a topic to get started.</div></div>
+    </div>
+    <div id="input-area">
+      <div id="menu-level" class="radio-group"></div>
+      <input type="text" id="customQuery" placeholder="Type your custom query here...">
+      <div class="button-group">
+        <button onclick="sendQuery()"><i class="fas fa-paper-plane"></i>Send</button>
+        <button onclick="goBack()" id="backButton" style="display:none"><i class="fas fa-arrow-left"></i>Back</button>
+      </div>
+      <div class="satisfaction-buttons" id="satisfactionDiv">
+        <strong>Are you satisfied?</strong>
+        <button onclick="handleSatisfaction(true)">Yes</button>
+        <button onclick="handleSatisfaction(false)">No</button>
+      </div>
+      <div class="wait-animation" id="waitText">Connecting you to a human agent... <span id="dots"></span></div>
+    </div>
+  </div>
+  <script>
+    const hierarchy = { root: { label: "Main Menu", options: { ui: "UI Related Queries", tech: "Technical Queries", other: "Other" } }, ui: { label: "UI Related", options: { wizard: "Is there a visual wizard?", preview: "Can I preview transformed data?", filter: "How do I filter records?", summarize: "Can I summarize the result?", customUI: "Can I customize dashboard UI?" } }, tech: { label: "Technical Queries", options: { setup: "Pipeline Setup", issues: "Troubleshooting", reporting: "Reporting", export: "Export & Logs" } }, setup: { label: "Pipeline Setup", options: { create: "How do I create a pipeline?", schedule: "How do I schedule recurring jobs?", reuse: "Can I reuse a pipeline template?", conditional: "How do I add conditional logic?" } }, issues: { label: "Troubleshooting", options: { failure: "Why did the ETL job fail?", error: "What does this error mean?", nulls: "Can you fix this null error?", hang: "What if my job hangs?", reset: "How do I reset a failed job?" } }, reporting: { label: "Reporting", options: { simple: "How do I pull a simple report?", scheduleReport: "How do I schedule a report?", logs: "Where are logs for last 3 runs?" } }, export: { label: "Export & Logs", options: { export: "Can I export the cleaned data?", reportBug: "How do I report a bug?", escalate: "How to escalate an issue?", viewStatus: "How do I check job status?" } } };
+
+    const responses = {
+      wizard: "Go to Tools > Pipeline Wizard for step-by-step help.",
+      preview: "Use the Preview button in Transformation section.",
+      filter: "Apply filters in the transformation step.",
+      summarize: "Add 'Group By' step and choose summary metrics.",
+      customUI: "Go to Settings > UI Preferences to customize dashboard layout.",
+      create: "To create a pipeline: Go to Pipelines > Create New > Choose Source > Map Transformations > Set Destination > Save & Run.",
+      schedule: "Go to Scheduler > Create Job > Set Recurrence and Pipeline > Save.",
+      reuse: "Yes, pipelines can be saved as templates under 'Saved Templates'.",
+      conditional: "Use 'If-Then' logic in the transformation step.",
+      failure: "Check the job logs for Step 3 (Load).",
+      error: "This error indicates missing required fields.",
+      nulls: "Use Replace Nulls in transformation settings.",
+      hang: "Validate steps and retry. Check source connectivity.",
+      reset: "Select the failed job in Job History and click 'Reset'.",
+      simple: "Go to Reporting > New Report > Choose Pipeline > Generate.",
+      scheduleReport: "Use Report Scheduler > Set Time and Recipients.",
+      export: "Go to Output > Select CSV or Excel > Export.",
+      logs: "Logs can be viewed under Monitoring > Logs tab.",
+      reportBug: "Click 'Help' > 'Report a Bug'. Attach screenshots if possible.",
+      escalate: "Use ticket system > Click 'Escalate'.",
+      viewStatus: "Job status is available under Job Monitor tab."
+    };
+
+    let currentLevel = 'root';
+    let interactionCount = 0;
+
+    function renderMenu(level) {
+      const menuDiv = document.getElementById("menu-level");
+      menuDiv.innerHTML = `<strong>${hierarchy[level].label}</strong>`;
+      Object.entries(hierarchy[level].options).forEach(([key, label]) => {
+        const option = document.createElement("label");
+        option.innerHTML = `<input type='radio' name='query' value='${key}'> ${label}`;
+        menuDiv.appendChild(option);
+      });
+      document.getElementById("customQuery").style.display = 'none';
+      document.getElementById("backButton").style.display = (level !== 'root') ? 'inline-block' : 'none';
+    }
+
+    function goBack() {
+      currentLevel = 'root';
+      renderMenu(currentLevel);
+    }
+
+    function sendQuery() {
+      const selected = document.querySelector('input[name="query"]:checked');
+      const userText = selected ? selected.nextSibling.textContent.trim() : document.getElementById("customQuery").value.trim();
+      const chatbox = document.getElementById("chatbox");
+      const userMsg = document.createElement("div");
+      userMsg.className = "msg user";
+      userMsg.innerHTML = `<div class='text'>${userText}</div>`;
+      chatbox.appendChild(userMsg);
+
+      const value = selected ? selected.value : "custom";
+
+      if (value === "other") {
+        document.getElementById("customQuery").style.display = 'block';
+        return;
+      }
+      if (hierarchy[value]) {
+        currentLevel = value;
+        renderMenu(currentLevel);
+        return;
+      }
+
+      const botText = responses[value] || "Thank you! A specialist will follow up on this custom query.";
+      const botMsg = document.createElement("div");
+      botMsg.className = "msg bot";
+      botMsg.innerHTML = `<div class='text'>${botText}</div>`;
+      chatbox.appendChild(botMsg);
+      chatbox.scrollTop = chatbox.scrollHeight;
+
+      interactionCount++;
+      if (interactionCount % 2 === 0) {
+        document.getElementById("satisfactionDiv").style.display = "flex";
+      }
+    }
+
+    function handleSatisfaction(satisfied) {
+      document.getElementById("satisfactionDiv").style.display = "none";
+      if (!satisfied) {
+        const chatbox = document.getElementById("chatbox");
+        const ask = document.createElement("div");
+        ask.className = "msg bot";
+        ask.innerHTML = "<div class='text'>Would you like to connect with a human agent?</div>";
+        chatbox.appendChild(ask);
+
+        const yesBtn = document.createElement("button");
+        yesBtn.textContent = "Yes, connect me";
+        yesBtn.onclick = () => {
+          ask.innerHTML = "<div class='text'>Connecting you to a human agent...</div>";
+          document.getElementById("waitText").style.display = "block";
+          animateWait();
+        };
+        chatbox.appendChild(yesBtn);
+      }
+    }
+
+    function animateWait() {
+      const dots = document.getElementById("dots");
+      let count = 0;
+      setInterval(() => {
+        dots.textContent = '.'.repeat(count % 4);
+        count++;
+      }, 500);
+    }
+
+    renderMenu(currentLevel);
+  </script>
+</body>
+</html>
